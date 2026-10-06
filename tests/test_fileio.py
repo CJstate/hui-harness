@@ -13,14 +13,41 @@ def test_read_text_safe_strips_utf8_bom(tmp_path):
     assert encoding == "utf-8-sig"
 
 
+def _locale_sample(encoding: str) -> str:
+    """Non-ASCII text that the machine's own code page can actually represent.
+
+    A US Windows runner is cp1252, where CJK fixture text cannot be encoded at
+    all: the test would fail while building the fixture, before the library was
+    ever called.
+    """
+    for sample in ("中文批注 · 编码", "café · résumé"):
+        try:
+            sample.encode(encoding)
+        except UnicodeEncodeError:
+            continue
+        return sample
+    raise AssertionError(f"no sample text is encodable as {encoding}")
+
+
 def test_read_text_safe_uses_locale_encoding_for_local_files(tmp_path):
-    """A file saved by a Chinese Windows editor is GBK, not UTF-8."""
+    """A file saved by a local editor is in the machine's code page, not UTF-8."""
     path = tmp_path / "gbk.txt"
     preferred = locale.getpreferredencoding(False)
-    path.write_bytes("中文批注 · 编码".encode(preferred))
+    sample = _locale_sample(preferred)
+    path.write_bytes(sample.encode(preferred))
     text, encoding = fileio.read_text_safe(path)
-    assert text == "中文批注 · 编码"
+    assert text == sample
     assert encoding != "latin-1"
+
+
+def test_read_text_safe_falls_back_to_a_us_windows_code_page(tmp_path, monkeypatch):
+    """Reproduces the cp1252 CI runner: not UTF-8, and the locale is not CJK."""
+    monkeypatch.setattr(fileio.locale, "getpreferredencoding", lambda *a, **k: "cp1252")
+    path = tmp_path / "latin1-notes.txt"
+    path.write_bytes("café · résumé".encode("cp1252"))
+    text, encoding = fileio.read_text_safe(path)
+    assert text == "café · résumé"
+    assert encoding.lower() == "cp1252"
 
 
 def test_candidate_encodings_always_ends_with_latin1():

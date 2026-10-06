@@ -68,12 +68,24 @@ def test_duplicate_registration_is_refused(env):
     assert registry.get("read_file")
 
 
+def _locale_sample(encoding: str) -> str:
+    """Non-ASCII text this machine's code page can represent (cp1252 cannot do CJK)."""
+    for sample in ("中文注释", "café · résumé"):
+        try:
+            sample.encode(encoding)
+        except UnicodeEncodeError:
+            continue
+        return sample
+    raise AssertionError(f"no sample text is encodable as {encoding}")
+
+
 def test_read_file_reports_locale_encoded_text(env):
     registry, ctx, workspace = env
     preferred = locale.getpreferredencoding(False)
-    (workspace / "notes.txt").write_bytes("中文注释\nsecond\n".encode(preferred))
+    sample = _locale_sample(preferred)
+    (workspace / "notes.txt").write_bytes(f"{sample}\nsecond\n".encode(preferred))
     out = run(registry, ctx, "read_file", path="notes.txt")
-    assert "中文注释" in out
+    assert sample in out
     assert "encoding=" in out
     assert "2 lines" in out
 

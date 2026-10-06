@@ -15,8 +15,8 @@ $ hui replay .sessions/session-20261006-114248.jsonl
 ![Runtime dependencies](https://img.shields.io/badge/runtime%20dependencies-0-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-- **~3,000 lines of stdlib Python** across 10 modules; `pip install` pulls in nothing.
-- **138 tests**, ruff-clean, and a CI matrix over Linux / Windows / macOS × Python 3.10–3.13.
+- **~3,000 lines of pure stdlib Python** in `hui/`; `pip install` pulls in nothing.
+- **139 tests**, ruff-clean, and a CI matrix over Linux / Windows / macOS × Python 3.10–3.13.
 - **CI proves the replay claim** on Linux and Windows instead of asking you to trust it.
 
 ---
@@ -134,7 +134,7 @@ each pattern, plus tests that ordinary commands such as `rm -rf ./build` are *no
 
 ## Windows, encodings and consoles
 
-Cross-platform agents usually fail on exactly these five things, so each one has a test:
+Cross-platform agents usually fail on exactly these things, so each one has a test:
 
 1. `read_text()` with no `encoding=` on a GBK machine → `UnicodeEncodeError`. `read_text_safe`
    tries UTF-8, then the locale encoding, then Latin-1 and reports which one it used.
@@ -146,6 +146,9 @@ Cross-platform agents usually fail on exactly these five things, so each one has
    an argv list (`powershell -NoProfile -NonInteractive -Command` on Windows, `/bin/sh -c` elsewhere).
 5. A cp936 console that cannot print an em dash or CJK output → `main()` reconfigures stdout/stderr
    with `errors="replace"`, so a result is never lost to a `UnicodeEncodeError`.
+6. A US-locale runner is **cp1252**, not cp936: HUI's first CI run failed there because a *test
+   fixture* tried to encode CJK sample text in the runner's own code page. The library was correct;
+   the fixture now picks sample text its locale can represent, and a unit test simulates cp1252.
 
 ## Non-goals
 
@@ -162,7 +165,7 @@ Honest scope, because an agent that claims everything does nothing well:
 
 ```console
 $ python -m pip install -e . pytest ruff
-$ python -m pytest -q          # 138 tests, offline (ScriptedProvider, no network)
+$ python -m pytest -q          # 139 tests, offline (ScriptedProvider, no network)
 $ ruff check . && ruff format --check .
 $ python -m build              # sdist + wheel
 ```
