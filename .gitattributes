@@ -1,0 +1,5 @@
+# Keep the repository byte-identical on every platform: LF everywhere, no CRLF churn.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary

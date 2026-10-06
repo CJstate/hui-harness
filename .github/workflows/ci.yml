@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install --upgrade pip ruff
+      - name: ruff check
+        run: ruff check .
+      - name: ruff format --check
+        run: ruff format --check .
+
+  tests:
+    name: tests (${{ matrix.os }} / ${{ matrix.python-version }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e . pytest
+      - name: pytest
+        run: python -m pytest -q
+
+  replay-guarantee:
+    # The headline claim is that a recorded session replays bit-for-bit.
+    # This job proves it on a real machine instead of asking you to trust it.
+    name: replay guarantee (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e .
+      - name: record a session, then replay it byte-for-byte
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m hui demo --dir .hui-demo --session-dir .sessions
+          session="$(ls .sessions/*.jsonl | head -n 1)"
+          python -m hui replay "$session" -C .hui-demo
+          python -m hui replay "$session" --list --json > /dev/null
+
+  package:
+    name: build and install the wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install --upgrade pip build
+      - run: python -m build
+      - run: python -m pip install dist/*.whl
+      - name: the installed console script works outside the source tree
+        working-directory: ${{ runner.temp }}
+        run: |
+          hui --version
+          python -c "import hui; print(hui.__version__)"
