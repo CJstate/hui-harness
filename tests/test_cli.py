@@ -63,9 +63,7 @@ def test_run_provider_flag_builds_the_named_preset(tmp_path, capsys, monkeypatch
         return ScriptedProvider.text("ok")
 
     monkeypatch.setattr(cli, "build_provider", fake_build)
-    code = cli.main(
-        ["run", "hi", "--provider", "glm", "--session-dir", str(tmp_path), "--quiet"]
-    )
+    code = cli.main(["run", "hi", "--provider", "glm", "--session-dir", str(tmp_path), "--quiet"])
     assert code == 0
     assert captured["name"] == "glm"
 
