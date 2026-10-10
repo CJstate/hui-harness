@@ -53,6 +53,23 @@ def test_run_without_credentials_reports_a_provider_error(tmp_path, capsys, monk
     assert "provider error" in capsys.readouterr().err
 
 
+def test_run_provider_flag_builds_the_named_preset(tmp_path, capsys, monkeypatch):
+    # `--provider` names a preset; passing it through the override dict used to
+    # crash with AttributeError because ProviderConfig has no `provider` field.
+    captured = {}
+
+    def fake_build(config):
+        captured["name"] = config.name
+        return ScriptedProvider.text("ok")
+
+    monkeypatch.setattr(cli, "build_provider", fake_build)
+    code = cli.main(
+        ["run", "hi", "--provider", "glm", "--session-dir", str(tmp_path), "--quiet"]
+    )
+    assert code == 0
+    assert captured["name"] == "glm"
+
+
 def test_run_with_a_scripted_provider_prints_a_summary(tmp_path, capsys, monkeypatch):
     from hui.providers import ScriptedProvider as SP
 

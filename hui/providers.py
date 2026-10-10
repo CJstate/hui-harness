@@ -530,6 +530,8 @@ def config_from_env(overrides: dict[str, Any] | None = None) -> ProviderConfig:
     self-hosted OpenAI-compatible server.
     """
     name = (os.environ.get("HUI_PROVIDER") or "deepseek").strip().lower()
+    if overrides and overrides.get("provider"):
+        name = str(overrides.pop("provider")).strip().lower()
     preset = PRESETS.get(name, PRESETS["deepseek"])
     base_url = os.environ.get("HUI_BASE_URL") or preset["base_url"]
     model = os.environ.get("HUI_MODEL") or preset["model"]

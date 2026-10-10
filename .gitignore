@@ -9,4 +9,6 @@ dist/
 .ruff_cache/
 .hui-demo*/
 .sessions*/
+.e2e-workspace/
+.e2e-sessions/
 pytest-out.txt
